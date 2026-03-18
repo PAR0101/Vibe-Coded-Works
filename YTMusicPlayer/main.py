@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys, os
 
-# Force-add this file's directory to sys.path
 _DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _DIR)
 os.chdir(_DIR)
@@ -17,6 +16,10 @@ def check_dependencies():
     except ImportError: missing.append("yt-dlp")
     try: import requests
     except ImportError: missing.append("requests")
+    try: import sounddevice
+    except ImportError: missing.append("sounddevice")
+    try: import numpy
+    except ImportError: missing.append("numpy")
     if missing:
         print("=" * 60)
         print("  Missing:", ", ".join(missing))
@@ -28,7 +31,6 @@ check_dependencies()
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontDatabase
 from ui.main_window import MainWindow
 
 def main():

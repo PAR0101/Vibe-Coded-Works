@@ -3,10 +3,6 @@ ui/login_dialog.py
 ──────────────────
 Login dialog that guides users to export browser cookies for
 authenticated YouTube access (history, liked songs, playlists).
-
-Two methods:
-  1. Automatic browser cookie extraction (via yt-dlp --cookies-from-browser)
-  2. Manual cookie file path entry
 """
 
 import os
@@ -23,9 +19,7 @@ from ui.theme import ACCENT_PURPLE, ACCENT_PINK, TEXT_MUTED, GLASS_BORDER
 
 
 class CookieExtractThread(QThread):
-    """Background thread to test a cookie file with yt-dlp."""
-
-    result = pyqtSignal(bool, str)  # success, message
+    result = pyqtSignal(bool, str)
 
     def __init__(self, cookie_path: str):
         super().__init__()
@@ -35,17 +29,13 @@ class CookieExtractThread(QThread):
         try:
             import yt_dlp
             opts = {
-                "quiet": True,
-                "no_warnings": True,
-                "skip_download": True,
-                "extract_flat": True,
+                "quiet": True, "no_warnings": True,
+                "skip_download": True, "extract_flat": True,
                 "cookiefile": self.cookie_path,
             }
             with yt_dlp.YoutubeDL(opts) as ydl:
-                # Try to access the liked-videos playlist — requires login
                 info = ydl.extract_info(
-                    "https://www.youtube.com/playlist?list=LL",
-                    download=False,
+                    "https://www.youtube.com/playlist?list=LL", download=False,
                 )
             self.result.emit(True, "Login successful! Personalised content enabled.")
         except Exception as e:
@@ -57,14 +47,6 @@ class CookieExtractThread(QThread):
 
 
 class LoginDialog(QDialog):
-    """
-    Modal dialog for YouTube authentication.
-
-    Signals
-    -------
-    login_successful(str)   — path to the valid cookie file
-    """
-
     login_successful = pyqtSignal(str)
 
     def __init__(self, parent=None):
@@ -93,7 +75,6 @@ class LoginDialog(QDialog):
         card_layout.setContentsMargins(28, 28, 28, 28)
         card_layout.setSpacing(16)
 
-        # Title
         title = QLabel("Connect to YouTube")
         title.setStyleSheet("font-size: 20px; font-weight: 700; color: white;")
         card_layout.addWidget(title)
@@ -106,7 +87,6 @@ class LoginDialog(QDialog):
         sub.setWordWrap(True)
         card_layout.addWidget(sub)
 
-        # Tabs
         tabs = QTabWidget()
         tabs.setStyleSheet(f"""
             QTabWidget::pane {{ border: 1px solid {GLASS_BORDER}; border-radius: 8px; background: transparent; }}
@@ -114,11 +94,9 @@ class LoginDialog(QDialog):
             QTabBar::tab:selected {{ background: rgba(155,93,229,0.35); color: white; }}
         """)
 
-        # Tab 1: Instructions
         instr_tab = QWidget()
         instr_layout = QVBoxLayout(instr_tab)
         instr_layout.setContentsMargins(12, 12, 12, 12)
-
         steps = QLabel(
             "1. Install the <b>cookies.txt</b> browser extension\n"
             "   (Firefox: cookies.txt / Chrome: Get cookies.txt LOCALLY)\n\n"
@@ -131,7 +109,6 @@ class LoginDialog(QDialog):
         instr_layout.addWidget(steps)
         tabs.addTab(instr_tab, "📋  How to")
 
-        # Tab 2: File picker
         file_tab = QWidget()
         file_layout = QVBoxLayout(file_tab)
         file_layout.setContentsMargins(12, 16, 12, 12)
@@ -157,7 +134,6 @@ class LoginDialog(QDialog):
                 border: none; border-radius: 8px;
                 color: white; font-size: 14px; font-weight: 600;
             }}
-            QPushButton:hover {{ opacity: 0.85; }}
             QPushButton:disabled {{ background: rgba(255,255,255,15); color: rgba(255,255,255,60); }}
         """)
         self._test_btn.clicked.connect(self._verify)
@@ -183,7 +159,6 @@ class LoginDialog(QDialog):
         tabs.setCurrentIndex(1)
         card_layout.addWidget(tabs, 1)
 
-        # Bottom buttons
         btn_row = QHBoxLayout()
         skip_btn = QPushButton("Skip — Browse without login")
         skip_btn.setStyleSheet(f"color: {TEXT_MUTED}; background: transparent; border: none;")
@@ -213,13 +188,11 @@ class LoginDialog(QDialog):
             self._result_lbl.setText("⚠  File not found.")
             self._result_lbl.setStyleSheet("color: #F72585;")
             return
-
         self._test_btn.setEnabled(False)
         self._progress.show()
         self._result_lbl.setText("Verifying cookies…")
         self._result_lbl.setStyleSheet(f"color: {TEXT_MUTED};")
         self._cookie_path = path
-
         self._thread = CookieExtractThread(path)
         self._thread.result.connect(self._on_result)
         self._thread.start()

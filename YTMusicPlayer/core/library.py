@@ -13,7 +13,7 @@ from typing import Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 
 
-DATA_DIR = os.path.join(os.path.expanduser("~"), ".ytmusicplayer")
+DATA_DIR       = os.path.join(os.path.expanduser("~"), ".ytmusicplayer")
 PLAYLISTS_FILE = os.path.join(DATA_DIR, "playlists.json")
 HISTORY_FILE   = os.path.join(DATA_DIR, "history.json")
 LIKED_FILE     = os.path.join(DATA_DIR, "liked.json")
@@ -39,14 +39,6 @@ def _save_json(path: str, data):
 
 
 class Library(QObject):
-    """
-    Local library manager.
-
-    Signals
-    -------
-    library_changed()   — any mutation to playlists / liked / history
-    """
-
     library_changed = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -55,13 +47,8 @@ class Library(QObject):
         self._history:   list = _load_json(HISTORY_FILE,   [])
         self._liked:     dict = _load_json(LIKED_FILE,     {})
 
-    # ── History ─────────────────────────────────────────────────────────────
-
     def add_to_history(self, track_dict: dict):
-        """Prepend track, keeping only the last 200 entries."""
-        self._history = [
-            e for e in self._history if e.get("id") != track_dict.get("id")
-        ]
+        self._history = [e for e in self._history if e.get("id") != track_dict.get("id")]
         self._history.insert(0, {**track_dict, "_played_at": time.time()})
         self._history = self._history[:200]
         _save_json(HISTORY_FILE, self._history)
@@ -74,8 +61,6 @@ class Library(QObject):
         self._history = []
         _save_json(HISTORY_FILE, self._history)
         self.library_changed.emit()
-
-    # ── Liked songs ─────────────────────────────────────────────────────────
 
     def like_track(self, track_dict: dict):
         vid = track_dict.get("id", "")
@@ -94,9 +79,7 @@ class Library(QObject):
         return video_id in self._liked
 
     def get_liked(self) -> list:
-        return sorted(self._liked.values(), key=lambda x: x.get("_liked_at", 0), reverse=True)
-
-    # ── Playlists ────────────────────────────────────────────────────────────
+        return sorted(self._liked.values(), key=lambda x: x.get("_liked_at",0), reverse=True)
 
     def create_playlist(self, name: str) -> str:
         pid = hashlib.md5(f"{name}{time.time()}".encode()).hexdigest()[:8]
@@ -119,7 +102,6 @@ class Library(QObject):
     def add_to_playlist(self, pid: str, track_dict: dict):
         if pid in self._playlists:
             tracks = self._playlists[pid]["tracks"]
-            # avoid duplicates
             if not any(t.get("id") == track_dict.get("id") for t in tracks):
                 tracks.append(track_dict)
                 _save_json(PLAYLISTS_FILE, self._playlists)
@@ -128,8 +110,7 @@ class Library(QObject):
     def remove_from_playlist(self, pid: str, video_id: str):
         if pid in self._playlists:
             self._playlists[pid]["tracks"] = [
-                t for t in self._playlists[pid]["tracks"]
-                if t.get("id") != video_id
+                t for t in self._playlists[pid]["tracks"] if t.get("id") != video_id
             ]
             _save_json(PLAYLISTS_FILE, self._playlists)
             self.library_changed.emit()
@@ -139,8 +120,6 @@ class Library(QObject):
 
     def get_playlist_tracks(self, pid: str) -> list:
         return list(self._playlists.get(pid, {}).get("tracks", []))
-
-    # ── Thumbnail cache ──────────────────────────────────────────────────────
 
     def cache_path(self, url: str) -> str:
         h = hashlib.md5(url.encode()).hexdigest()

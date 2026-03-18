@@ -25,12 +25,6 @@ _BASE_OPTS = {
 
 
 class YTFetcher:
-    """
-    Utility for fetching playlists, channels, and URLs.
-
-    All methods are non-blocking; results delivered via callback(list[dict]).
-    """
-
     def __init__(self, cookie_file: Optional[str] = None):
         self.cookie_file = cookie_file
 
@@ -41,14 +35,9 @@ class YTFetcher:
             opts["cookiefile"] = self.cookie_file
         return opts
 
-    # ── Generic extractor ────────────────────────────────────────────────────
-
     def fetch_url(self, url: str, callback: Callable, flat: bool = True):
-        """Fetch any YouTube URL asynchronously."""
         threading.Thread(
-            target=self._fetch_worker,
-            args=(url, callback, flat),
-            daemon=True,
+            target=self._fetch_worker, args=(url, callback, flat), daemon=True,
         ).start()
 
     def _fetch_worker(self, url: str, callback: Callable, flat: bool):
@@ -56,30 +45,22 @@ class YTFetcher:
             with yt_dlp.YoutubeDL(self._opts(flat)) as ydl:
                 info = ydl.extract_info(url, download=False)
             entries = info.get("entries") if info else None
-            if entries is not None:
-                callback(list(entries))
-            elif info:
-                callback([info])
-            else:
-                callback([])
-        except Exception as e:
+            if entries is not None: callback(list(entries))
+            elif info: callback([info])
+            else: callback([])
+        except Exception:
             callback([])
-
-    # ── Convenience methods ──────────────────────────────────────────────────
 
     def fetch_playlist(self, playlist_url: str, callback: Callable):
         self.fetch_url(playlist_url, callback, flat=True)
 
     def fetch_liked_videos(self, callback: Callable):
-        """Requires authenticated cookies. Fetches 'Liked Videos' playlist."""
         self.fetch_url("https://www.youtube.com/playlist?list=LL", callback, flat=True)
 
     def fetch_history(self, callback: Callable):
-        """Requires authenticated cookies. Fetches watch history."""
         self.fetch_url("https://www.youtube.com/feed/history", callback, flat=True)
 
     def fetch_recommendations(self, callback: Callable):
-        """Fetch YouTube home feed recommendations (needs cookies for personalisation)."""
         self.fetch_url("https://www.youtube.com", callback, flat=True)
 
     def search(self, query: str, max_results: int, callback: Callable):
@@ -87,9 +68,7 @@ class YTFetcher:
             try:
                 opts = self._opts(flat=True)
                 with yt_dlp.YoutubeDL(opts) as ydl:
-                    info = ydl.extract_info(
-                        f"ytsearch{max_results}:{query}", download=False
-                    )
+                    info = ydl.extract_info(f"ytsearch{max_results}:{query}", download=False)
                 callback(list(info.get("entries") or []))
             except Exception:
                 callback([])
